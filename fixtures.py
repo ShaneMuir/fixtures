@@ -1,4 +1,5 @@
 import itertools
+import csv
 from datetime import datetime, timedelta
 
 divisions = {
@@ -66,7 +67,7 @@ divisions = {
                 "teams": [
                     "DUMMY",
                 ],
-                "tables": 0
+                "tables": 1
             }
         },
         "original_clubs": {
@@ -79,7 +80,7 @@ divisions = {
             "Club 7": 1,
             "Club 8": 1,
             "Club 9": 1,
-            "Club 10": 0
+            "Club 10": 1
         }
     },
     "Division 2": {
@@ -141,7 +142,7 @@ divisions = {
                 "teams": [
                     "DUMMY"
                 ],
-                "tables": 0
+                "tables": 1
             }
         },
         "original_clubs": {
@@ -153,7 +154,7 @@ divisions = {
             "Club 6": 3,
             "Club 14": 1,
             "Club 15": 1,
-            "Club 16": 0,
+            "Club 16": 1,
         }
     }
 }
@@ -258,29 +259,27 @@ def get_match_dates(start_date, weeks_available, match_day, match_time):
 def write_to_csv(fixtures, match_dates, filename):
     division_names = list(divisions.keys())
     max_week_fixtures = max([len(fixture[2]) for fixture in fixtures])
-    with open(filename, 'w') as f:
+    with open(filename, 'w', newline='') as f:
+        writer = csv.writer(f)
+
         # Write header row
-        for division_name in division_names:
-            f.write(f'Division,Week,Date,Home Team,Away Team')
-            if division_name != division_names[-1]:
-                f.write(',,,,')
-        f.write('\n')
+        header_row = ['Division', 'Week', 'Date', 'Home Team', 'Away Team'] * len(division_names)
+        writer.writerow(header_row)
 
         # Write fixtures
         for week in range(weeks_available):
             for i in range(max_week_fixtures):
+                row = []
                 for division_name in division_names:
                     fixture = [f for f in fixtures if f[0] == division_name and f[1] == week + 1][0]
                     _, _, week_fixtures = fixture
                     if i < len(week_fixtures):
                         home_team, away_team = week_fixtures[i]
-                        match_date = match_dates[week].strftime('%d-%m-%Y %I:%M %p')
-                        f.write(f'{division_name},{week + 1},{match_date},{home_team},{away_team}')
+                        match_date = match_dates[week].strftime('%d-%m-%Y')
+                        row.extend([division_name, week + 1, match_date, home_team, away_team])
                     else:
-                        f.write(',,,,')
-                    if division_name != division_names[-1]:
-                        f.write(',,,,')
-                f.write('\n')
+                        row.extend([''] * 5)
+                writer.writerow(row)
 
 
 fixtures = generate_fixture_list(weeks_available, match_day, match_time, divisions)
