@@ -1,5 +1,5 @@
-import csv
-from itertools import combinations
+import itertools
+from datetime import datetime, timedelta
 
 divisions = {
     "Division 1": {
@@ -29,71 +29,52 @@ divisions = {
     }
 }
 
-weeks_available = 100  # Total number of weeks available for matches
-
-# Step 2: Create a list of teams for each division
-team_list = {}
-for division, data in divisions.items():
-    team_list[division] = list(data["clubs"].keys())
-
-# Step 3: Generate round-robin schedule for each division
-fixtures = {}
-for division, teams in team_list.items():
-    fixtures[division] = list(combinations(teams, 2))
-
-
-# Step 4: Adjust the schedule for clubs with limited tables
-def distribute_matches(division, club, matches):
-    club_tables = divisions[division]["clubs"][club]
-    home_matches = matches[:club_tables]
-    away_matches = matches[club_tables:]
-    return list(zip(home_matches, away_matches)) + list(zip(away_matches, home_matches))
-
-
-# Step 5: Adjust the schedule for clubs with limited tables
-for division, data in divisions.items():
-    division_matches = fixtures[division]  # Store the matches for the division separately
-    updated_matches = division_matches  # Create a separate list for updating the matches
-    distributed_matches = []  # List to track the distributed matches
-    for club, tables in data["clubs"].items():
-        if tables < len(team_list[division]):
-            matches = [match for match in division_matches if club in match]
-            distributed = distribute_matches(division, club, matches)
-            distributed_matches.extend(distributed)
-    updated_matches = [match for match in updated_matches if match not in distributed_matches]
-    updated_matches.extend(distributed_matches)
-    fixtures[division] = updated_matches  # Update the fixtures dictionary
-
-# Step 6: Assign dates to the fixture list
-match_dates = {}
+weeks_available = 34  # Weeks from September to April
 match_day = "Thursday"
 match_time = "8:00 PM"
+start_date = datetime(2023, 9, 7)  # Start 7th of September
 
-for division, matches in fixtures.items():
-    num_matches = len(matches)
 
-    if num_matches > 0:  # Add check for zero matches
-        weeks_per_match = weeks_available // num_matches
+def generate_fixture_list(weeks_available, match_day, match_time, divisions):
+    fixtures = []
+    for division_name, division in divisions.items():
+        clubs = list(division['clubs'].keys())
+        club_combinations = list(itertools.combinations(clubs, 2))
+        for week in range(weeks_available):
+            week_fixtures = []
+            for home_team, away_team in club_combinations:
+                home_tables = division['clubs'][home_team]
+                away_tables = division['clubs'][away_team]
+                if home_tables > 0 and away_tables > 0:
+                    week_fixtures.append((home_team, away_team))
+                    division['clubs'][home_team] -= 1
+                    division['clubs'][away_team] -= 1
+            fixtures.append((division_name, week + 1, week_fixtures))
+    return fixtures
 
-        if weeks_per_match == 0:  # Handle zero division error
-            print(f"Not enough weeks available for matches in {division}")
-            continue
 
-        match_dates[division] = []
+def get_match_dates(start_date, weeks_available, match_day, match_time):
+    match_dates = []
+    current_date = start_date
+    while len(match_dates) < weeks_available:
+        if current_date.strftime('%A') == match_day:
+            match_time_str = current_date.strftime('%Y-%m-%d') + ' ' + match_time
+            match_date = datetime.strptime(match_time_str, '%Y-%m-%d %I:%M %p')
+            match_dates.append(match_date)
+        current_date += timedelta(days=1)
+    return match_dates
 
-        for i, match in enumerate(matches, start=1):
-            week = (i - 1) % weeks_per_match + 1
-            date = f"Week {week}"
-            match_dates[division].append((date, match))
 
-# Step 7: Store the fixture list in a CSV file
-filename = "fixtures.csv"
+def write_to_csv(fixtures, match_dates, filename):
+    with open(filename, 'w') as f:
+        f.write('Division,Week,Date,Home Team,Away Team\n')
+        for fixture in fixtures:
+            division_name, week, week_fixtures = fixture
+            match_date = match_dates[week - 1].strftime('%Y-%m-%d %I:%M %p')
+            for home_team, away_team in week_fixtures:
+                f.write(f'{division_name},{week},{match_date},{home_team},{away_team}\n')
 
-with open(filename, "w", newline="") as csvfile:
-    writer = csv.writer(csvfile)
-    writer.writerow(["Division", "Date", "Home Club", "Away Club"])
 
-    for division, dates in match_dates.items():
-        for date, match in dates:
-            for teams in match:
-                writer.writerow([division, date, teams[0], teams[1]])
+fixtures = generate_fixture_list(weeks_available, match_day, match_time, divisions)
+match_dates = get_match_dates(start_date, weeks_available, match_day, match_time)
+write_to_csv(fixtures, match_dates, 'fixtures.csv')
