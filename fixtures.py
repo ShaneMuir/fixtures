@@ -13,10 +13,31 @@ divisions = {
             "Club 7": 1,
             "Club 8": 1,
             "Club 9": 1
+        },
+        "original_clubs": {  # Used to reset clubs table back to original state for each week
+            "Club 1": 1,
+            "Club 2": 1,
+            "Club 3": 1,
+            "Club 4": 2,
+            "Club 5": 1,
+            "Club 6": 3,
+            "Club 7": 1,
+            "Club 8": 1,
+            "Club 9": 1
         }
     },
     "Division 2": {
         "clubs": {
+            "Club 10": 1,
+            "Club 11": 1,
+            "Club 12": 2,
+            "Club 13": 1,
+            "Club 4": 2,
+            "Club 6": 3,
+            "Club 14": 1,
+            "Club 15": 1
+        },
+        "original_clubs": {
             "Club 10": 1,
             "Club 11": 1,
             "Club 12": 2,
@@ -50,13 +71,35 @@ def generate_fixture_list(weeks_available, match_day, match_time, divisions):
                     division['clubs'][home_team] -= 1
                     division['clubs'][away_team] -= 1
             fixtures.append((division_name, week + 1, week_fixtures))
+            # reset table availability for next week
+            for club in clubs:
+                division['clubs'][club] = division['original_clubs'][club]
     return fixtures
 
 
 def get_match_dates(start_date, weeks_available, match_day, match_time):
     match_dates = []
     current_date = start_date
+    # Set the dates for the breaks
+    pre_xmas_break_start = datetime(2023, 12, 8)
+    pre_xmas_break_end = datetime(2023, 12, 22)
+    xmas_break_start = datetime(2023, 12, 22)
+    xmas_break_end = datetime(2024, 1, 5)
+    post_xmas_break_start = datetime(2024, 1, 5)
+    post_xmas_break_end = datetime(2024, 1, 19)
+
     while len(match_dates) < weeks_available:
+        # Skip dates that fall within the breaks
+        if pre_xmas_break_start <= current_date < pre_xmas_break_end:
+            current_date += timedelta(days=1)
+            continue
+        if xmas_break_start <= current_date < xmas_break_end:
+            current_date += timedelta(days=1)
+            continue
+        if post_xmas_break_start <= current_date < post_xmas_break_end:
+            current_date += timedelta(days=1)
+            continue
+
         if current_date.strftime('%A') == match_day:
             match_time_str = current_date.strftime('%Y-%m-%d') + ' ' + match_time
             match_date = datetime.strptime(match_time_str, '%Y-%m-%d %I:%M %p')
