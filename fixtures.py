@@ -109,13 +109,33 @@ def get_match_dates(start_date, weeks_available, match_day, match_time):
 
 
 def write_to_csv(fixtures, match_dates, filename):
+    max_week_fixtures = max([len(fixture[2]) for fixture in fixtures])
+    weeks_per_row = 3
     with open(filename, 'w') as f:
-        f.write('Division,Week,Date,Home Team,Away Team\n')
-        for fixture in fixtures:
-            division_name, week, week_fixtures = fixture
-            match_date = match_dates[week - 1].strftime('%Y-%m-%d %I:%M %p')
-            for home_team, away_team in week_fixtures:
-                f.write(f'{division_name},{week},{match_date},{home_team},{away_team}\n')
+        # Write header row
+        for i in range(weeks_per_row):
+            f.write('Division,Week,Date,Home Team,Away Team')
+            if i < weeks_per_row - 1:
+                f.write(',')
+        f.write('\n')
+
+        # Write fixtures
+        for row in range(0, weeks_available, weeks_per_row):
+            for i in range(max_week_fixtures):
+                for week_offset in range(weeks_per_row):
+                    week = row + week_offset
+                    if week < weeks_available:
+                        fixture = fixtures[week]
+                        division_name, _, week_fixtures = fixture
+                        if i < len(week_fixtures):
+                            home_team, away_team = week_fixtures[i]
+                            match_date = match_dates[week].strftime('%d-%m-%Y %I:%M %p')
+                            f.write(f'{division_name},{week + 1},{match_date},{home_team},{away_team}')
+                        else:
+                            f.write(',,,,')
+                    if week_offset < weeks_per_row - 1:
+                        f.write(',')
+                f.write('\n')
 
 
 fixtures = generate_fixture_list(weeks_available, match_day, match_time, divisions)
