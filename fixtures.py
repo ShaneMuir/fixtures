@@ -61,6 +61,7 @@ def generate_fixture_list(weeks_available, match_day, match_time, divisions):
     for division_name, division in divisions.items():
         clubs = list(division['clubs'].keys())
         club_combinations = list(itertools.combinations(clubs, 2))
+        scheduled_games = {}
         for week in range(weeks_available):
             week_fixtures = []
             scheduled_clubs = set()
@@ -69,17 +70,31 @@ def generate_fixture_list(weeks_available, match_day, match_time, divisions):
                     home_tables = division['clubs'][home_team]
                     away_tables = division['clubs'][away_team]
                     if home_tables > 0 and away_tables > 0:
-                        week_fixtures.append((home_team, away_team))
-                        division['clubs'][home_team] -= 1
-                        division['clubs'][away_team] -= 1
-                        scheduled_clubs.add(home_team)
-                        scheduled_clubs.add(away_team)
+                        game_key_1 = f'{home_team}-{away_team}'
+                        game_key_2 = f'{away_team}-{home_team}'
+                        if game_key_1 not in scheduled_games and game_key_2 not in scheduled_games:
+                            week_home_games = len([f for f in week_fixtures if f[0] == home_team])
+                            if week_home_games < home_tables:
+                                week_fixtures.append((home_team, away_team))
+                                division['clubs'][home_team] -= 1
+                                division['clubs'][away_team] -= 1
+                                scheduled_clubs.add(home_team)
+                                scheduled_clubs.add(away_team)
+                                scheduled_games[game_key_1] = True
+                        elif game_key_2 not in scheduled_games:
+                            week_home_games = len([f for f in week_fixtures if f[0] == away_team])
+                            if week_home_games < away_tables:
+                                week_fixtures.append((away_team, home_team))
+                                division['clubs'][away_team] -= 1
+                                division['clubs'][home_team] -= 1
+                                scheduled_clubs.add(home_team)
+                                scheduled_clubs.add(away_team)
+                                scheduled_games[game_key_2] = True
             fixtures.append((division_name, week + 1, week_fixtures))
             # reset table availability for next week
             for club in clubs:
                 division['clubs'][club] = division['original_clubs'][club]
     return fixtures
-
 
 
 def get_match_dates(start_date, weeks_available, match_day, match_time):
