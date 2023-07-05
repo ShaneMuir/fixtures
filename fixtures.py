@@ -4,17 +4,65 @@ from datetime import datetime, timedelta
 divisions = {
     "Division 1": {
         "clubs": {
-            "Club 1": 1,
-            "Club 2": 1,
-            "Club 3": 1,
-            "Club 4": 2,
-            "Club 5": 1,
-            "Club 6": 3,
-            "Club 7": 1,
-            "Club 8": 1,
-            "Club 9": 1
+            "Club 1": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 2": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 3": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 4": {
+                "teams": [
+                    "team_one",
+                    "team_two"
+                ],
+                "tables": 2
+            },
+            "Club 5": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 6": {
+                "teams": [
+                    "team_one",
+                    "team_two",
+                    "team_three"
+                ],
+                "tables": 3
+            },
+            "Club 7": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 8": {
+                "teams": [
+                    "team_two"
+                ],
+                "tables": 1
+            },
+            "Club 9": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            }
         },
-        "original_clubs": {  # Used to reset clubs table back to original state for each week
+        "original_clubs": {
             "Club 1": 1,
             "Club 2": 1,
             "Club 3": 1,
@@ -28,14 +76,58 @@ divisions = {
     },
     "Division 2": {
         "clubs": {
-            "Club 10": 1,
-            "Club 11": 1,
-            "Club 12": 2,
-            "Club 13": 1,
-            "Club 4": 2,
-            "Club 6": 3,
-            "Club 14": 1,
-            "Club 15": 1
+            "Club 10": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 11": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 12": {
+                "teams": [
+                    "team_one",
+                    "team_two"
+                ],
+                "tables": 2
+            },
+            "Club 13": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 4": {
+                "teams": [
+                    "team_one",
+                    "team_two"
+                ],
+                "tables": 2
+            },
+            "Club 6": {
+                "teams": [
+                    "team_one",
+                    "team_two",
+                    "team_three"
+                ],
+                "tables": 3
+            },
+            "Club 14": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            },
+            "Club 15": {
+                "teams": [
+                    "team_one"
+                ],
+                "tables": 1
+            }
         },
         "original_clubs": {
             "Club 10": 1,
@@ -60,40 +152,37 @@ def generate_fixture_list(weeks_available, match_day, match_time, divisions):
     fixtures = []
     for division_name, division in divisions.items():
         clubs = list(division['clubs'].keys())
-        club_combinations = list(itertools.combinations(clubs, 2))
+        club_combinations = []
+        for club_name, club in division['clubs'].items():
+            for team_name in club['teams']:
+                for opponent_club_name, opponent_club in division['clubs'].items():
+                    if club_name != opponent_club_name:
+                        for opponent_team_name in opponent_club['teams']:
+                            club_combinations.append((f'{club_name} {team_name}', f'{opponent_club_name} {opponent_team_name}'))
         scheduled_games = {}
         for week in range(weeks_available):
             week_fixtures = []
-            scheduled_clubs = set()
+            scheduled_teams = set()
             for home_team, away_team in club_combinations:
-                if home_team not in scheduled_clubs and away_team not in scheduled_clubs:
-                    home_tables = division['clubs'][home_team]
-                    away_tables = division['clubs'][away_team]
+                if home_team not in scheduled_teams and away_team not in scheduled_teams:
+                    home_club_name = ' '.join(home_team.split(' ')[:-1])
+                    away_club_name = ' '.join(away_team.split(' ')[:-1])
+                    home_tables = division['clubs'][home_club_name]['tables']
+                    away_tables = division['clubs'][away_club_name]['tables']
                     if home_tables > 0 and away_tables > 0:
                         game_key_1 = f'{home_team}-{away_team}'
                         game_key_2 = f'{away_team}-{home_team}'
                         if game_key_1 not in scheduled_games and game_key_2 not in scheduled_games:
-                            week_home_games = len([f for f in week_fixtures if f[0] == home_team])
-                            if week_home_games < home_tables:
-                                week_fixtures.append((home_team, away_team))
-                                division['clubs'][home_team] -= 1
-                                division['clubs'][away_team] -= 1
-                                scheduled_clubs.add(home_team)
-                                scheduled_clubs.add(away_team)
-                                scheduled_games[game_key_1] = True
+                            week_fixtures.append((home_team, away_team))
+                            scheduled_teams.add(home_team)
+                            scheduled_teams.add(away_team)
+                            scheduled_games[game_key_1] = True
                         elif game_key_2 not in scheduled_games:
-                            week_home_games = len([f for f in week_fixtures if f[0] == away_team])
-                            if week_home_games < away_tables:
-                                week_fixtures.append((away_team, home_team))
-                                division['clubs'][away_team] -= 1
-                                division['clubs'][home_team] -= 1
-                                scheduled_clubs.add(home_team)
-                                scheduled_clubs.add(away_team)
-                                scheduled_games[game_key_2] = True
+                            week_fixtures.append((away_team, home_team))
+                            scheduled_teams.add(home_team)
+                            scheduled_teams.add(away_team)
+                            scheduled_games[game_key_2] = True
             fixtures.append((division_name, week + 1, week_fixtures))
-            # reset table availability for next week
-            for club in clubs:
-                division['clubs'][club] = division['original_clubs'][club]
     return fixtures
 
 
